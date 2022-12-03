@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Square Club</title>
+	<meta charset="utf-8"></meta>
+</head>
+<body>
+	<style>
+body{ background: black;}
+#game{position:relative; left:200px; width:800px; height:610px; background:rgb(20,10,160);}
+.square{position:absolute; width:50px; height:50px; background:green;}
+	</style>
+	<div id="game" tabindex="0"></div>
+	<script>
+//JAVASCRIPT
+
+//MACRO
+const INPUTRATE = 100;
+//END MACRO
+
+const ws = new WebSocket("ws://localhost:8000");
+const game = document.querySelector("#game");
+let input = {ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false};
+function sendInput(code){
+	ws.send(JSON.stringify({code, type:"input"}));
+}
+game.addEventListener("keydown",event => {
+	if(!Object.keys(input).includes(event.code))return;
+	event.preventDefault();
+	if(!input[event.code]){
+		input[event.code] = true;
+		sendInput(event.code);
+		function repeat(){
+			sendInput(event.code);
+			time = setTimeout(repeat,INPUTRATE);
+		}
+		let time = setTimeout(repeat,INPUTRATE);
+		function onKeyUp(keyUpEvent){
+			if(keyUpEvent.code != event.code)return;
+			input[event.code] = false;
+			clearTimeout(time);
+			game.removeEventListener("keyup",onKeyUp);
+		};
+		game.addEventListener("keyup",onKeyUp);
+	}
+});
+let DOM = {};
+ws.onopen = () => {
+	ws.send(JSON.stringify({type:"new",name:prompt("username?")}));
+};
+ws.onmessage = (event) => {
+	for(let {x,y,id,text} of JSON.parse(event.data)){
+		if(!Object.keys(DOM).includes(id.toString())){
+			DOM[id] = game.appendChild(document.createElement("div"));
+			DOM[id].className = "square";
+		}
+		DOM[id].style.left = `${x}px`;
+		DOM[id].style.top = `${y}px`;
+		DOM[id].textContent = text;
+	}
+};
+	
+//END JAVASCRIPT
+	</script>
+</body>
+</html>
